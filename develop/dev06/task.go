@@ -23,70 +23,48 @@ import (
 Программа должна проходить все тесты. Код должен проходить проверки go vet и golint.
 */
 
-type fields []string
-
-func (fields) String() string {
-	return ""
+type flags struct {
+	fields       string
+	delimiter    string
+	is_separated bool
 }
 
-func (fields) Set(value string) error {
-	return nil
+func parseFlags() *flags {
+	f := flags{}
+
+	flag.StringVar(&f.fields, "f", "0", "fields")
+	flag.StringVar(&f.delimiter, "d", "\t", "delimiter")
+	flag.BoolVar(&f.is_separated, "s", false, "separated")
+	flag.Parse()
+
+	return &f
 }
 
-func cut(lines []string) ([]string, error) {
-	var (
-		res []string
-		b   strings.Builder
-		f   fields
-	)
-	delimiter := flag.String("d", "\t", "использовать другой разделитель")
-	separated := flag.Bool("s", true, "только строки с разделителем")
-	f = []string{"1", "3"}
-	flag.Var(&f, "f", "выбрать поля (колонки)")
-	for _, v := range lines {
-		tmp := strings.Split(v, *delimiter)
-		if (*separated && len(tmp) > 1) || (!*separated) {
-			for _, column := range f {
-				val, err := strconv.Atoi(column)
-				if err != nil {
-					return nil, err
-				}
-				if val <= len(tmp) {
-					b.WriteString(tmp[val-1])
-					b.WriteString(*delimiter)
-				}
-			}
-			b.WriteString("\n")
-			res = append(res, b.String())
-			b.Reset()
-		}
+func cut(input string, f *flags) string {
+	if f.is_separated && !strings.Contains(input, f.delimiter) {
+		return ""
 	}
 
-	return res, nil
+	sb := strings.Builder{}
+	sp := strings.Split(input, f.delimiter)
+	columns := strings.Split(f.fields, ",")
+	for i := 0; i < len(columns); i++ {
+		column, err := strconv.Atoi(columns[i])
+		if err != nil {
+			log.Fatalln("Некорректный ввод номера столбцов: ", err.Error())
+		}
+
+		sb.WriteString(sp[column])
+	}
+	return sb.String()
 }
 
 func main() {
-	var n int
-	_, err := fmt.Scan(&n)
-	if err != nil {
-		log.Fatal(err)
-	}
-	lines := make([]string, n)
-	for i := 0; i < n; i++ {
-		s, err := bufio.NewReader(os.Stdin).ReadString('\r')
-		if err != nil {
-			log.Fatal(err)
-		}
-		lines[i] = s
-	}
+	f := parseFlags()
+	sc := bufio.NewScanner(os.Stdin)
 
-	c, err := cut(lines)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	fmt.Println()
-	for _, v := range c {
-		fmt.Print(v)
+	for sc.Scan() {
+		text := sc.Text()
+		fmt.Println(">> ", cut(text, f))
 	}
 }
