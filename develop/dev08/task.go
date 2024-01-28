@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -23,7 +24,7 @@ import (
 принимать данные из stdin и отправлять в соединение (tcp/udp)
 Программа должна проходить все тесты. Код должен проходить проверки go vet и golint.
 */
-func exec(c string) error {
+func exec1(c string) error {
 	c = strings.Replace(c, "\r", "", 1)
 	c = strings.Replace(c, "\n", "", 1)
 	allc := strings.Split(c, " ")
@@ -73,10 +74,26 @@ func exec(c string) error {
 		for _, v := range list {
 			fmt.Print(v)
 		}
+	case "exec":
+		stdout, err := execute(allc)
+		if err != nil {
+			return err
+		}
+		fmt.Print(string(stdout))
+	case "fork":
 	default:
 		return fmt.Errorf("Неизвестная команда: %s", allc[0])
 	}
 	return nil
+}
+
+func execute(c []string) (string, error) {
+	cmd := exec.Command(c[1], c[2:]...)
+	stdout, err := cmd.Output()
+	if err != nil {
+		return "", err
+	}
+	return string(stdout), nil
 }
 
 // only Linux
@@ -131,7 +148,7 @@ func main() {
 			fmt.Print(err.Error())
 			os.Exit(1)
 		}
-		err = exec(c)
+		err = exec1(c)
 		if err != nil {
 			fmt.Print(err.Error())
 			os.Exit(1)

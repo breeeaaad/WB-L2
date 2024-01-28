@@ -2,15 +2,11 @@ package main
 
 import (
 	"bufio"
-	"errors"
 	"flag"
 	"log"
 	"net"
 	"os"
 	"os/signal"
-	"strconv"
-	"strings"
-	"syscall"
 	"time"
 )
 
@@ -30,64 +26,24 @@ go-telnet --timeout=10s host port go-telnet mysite.ru 8080 go-telnet --timeout=3
 */
 
 type TcpConnection struct {
-	port int
+	port string
 	host string
 	ttl  time.Duration
 }
 
-func flags() (TcpConnection, error) {
+func New() *TcpConnection {
+	conn := TcpConnection{}
+	flag.DurationVar(&conn.ttl, "timeout", 10*time.Second, "количество времени для соединения")
 	flag.Parse()
 	args := flag.Args()
-	if len(args) < 2 {
-		return TcpConnection{}, errors.New("Недостаточно аргументов")
-	}
-	var (
-		host      string
-		port, ttl int
-	)
-	for _, arg := range args {
-		a := strings.Split(arg, "=")
-		if len(a) == 1 {
-			return TcpConnection{}, errors.New("Отсутствует или неправльный аргумент")
-		}
-		if a[0] == "host" {
-			host = a[1]
-			continue
-		}
-		if a[0] == "port" {
-			p, err := strconv.Atoi(a[1])
-			if err != nil {
-				return TcpConnection{}, errors.New("Невозможно распарсить порт")
-			}
-			port = p
-			continue
-		}
-		if a[0] == "timeout" {
-			t, err := strconv.Atoi(a[1])
-			if err != nil {
-				return TcpConnection{}, errors.New("Невозможно распарсить timeout")
-			}
-			ttl = t
-			continue
-		}
-		return TcpConnection{}, errors.New("Неизветные аргументы")
-	}
-	if host == "" {
-		return TcpConnection{}, errors.New("Нет аргумента хоста")
-	}
-	return TcpConnection{
-		port: port,
-		host: host,
-		ttl:  time.Duration(ttl) * time.Second,
-	}, nil
+	conn.host = args[0]
+	conn.port = args[1]
+	return &conn
 }
 
 func main() {
-	c, err := flags()
-	if err != nil {
-		log.Fatal(err)
-	}
-	conn, err := net.DialTimeout("tcp", net.JoinHostPort(c.host, strconv.Itoa(c.port)), c.ttl)
+	c := New()
+	conn, err := net.DialTimeout("tcp", net.JoinHostPort(c.host, c.port), c.ttl)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -115,6 +71,6 @@ func main() {
 		}
 	}(conn)
 	sig := make(chan os.Signal, 1)
-	signal.Notify(sig, syscall.SIGQUIT)
+	signal.Notify(sig, os.Interrupt, os.Kill)
 	<-sig
 }

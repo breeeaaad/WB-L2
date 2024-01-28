@@ -15,7 +15,7 @@ func main() {
 		var data string
 		for sc.Scan() {
 			data = sc.Text()
-			fmt.Print(data)
+			fmt.Println(data)
 		}
 		cl.Close()
 	}
