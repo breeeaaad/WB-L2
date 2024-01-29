@@ -32,7 +32,9 @@ import (
 func main() {
 	s := service.New()
 	h := handlers.New(s)
+	log.Println("starting server")
 	if err := http.ListenAndServe(":8080", h.Router()); err != nil {
 		log.Fatal(err)
 	}
+	log.Print("server stopped")
 }

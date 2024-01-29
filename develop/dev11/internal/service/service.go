@@ -1,12 +1,21 @@
 package service
 
-import (
-	"task11/internal/models"
-)
+import "time"
 
-type Service map[int]models.User
+type Event struct {
+	UserId      int       `json:"user_id"`
+	EventId     int       `json:"event_id"`
+	Name        string    `json:"name"`
+	Description string    `json:"description"`
+	Date        time.Time `json:"date"`
+}
+
+type Service struct {
+	c map[int]Event
+}
 
 func New() *Service {
-	var s Service = make(map[int]models.User, 5)
-	return &s
+	return &Service{
+		c: make(map[int]Event, 10),
+	}
 }
